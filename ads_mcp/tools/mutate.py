@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 from google.ads.googleads.errors import GoogleAdsException
+from google.api_core import protobuf_helpers
 
 import ads_mcp.utils as utils
 
@@ -137,7 +138,7 @@ def update_campaign_budget(
     budget.amount_micros = _micros(daily_amount)
     client.copy_from(
         op.update_mask,
-        client.get_type("FieldMask")(paths=["amount_micros"]),
+        protobuf_helpers.field_mask(None, budget._pb),
     )
     try:
         resp = svc.mutate_campaign_budgets(
@@ -187,9 +188,14 @@ def create_search_campaign(
         client.enums.AdvertisingChannelTypeEnum.SEARCH
     )
     c.campaign_budget = budget_resource_name
-    c.target_spend.cpc_bid_ceiling_micros = (
-        _micros(max_cpc) if max_cpc else 0
-    )
+    # Activate TARGET_SPEND (Maximize Clicks). Only set a bid ceiling when
+    # provided — a ceiling of 0 is rejected by the API ("Too low").
+    if max_cpc:
+        c.target_spend.cpc_bid_ceiling_micros = _micros(max_cpc)
+    else:
+        client.copy_from(
+            c.target_spend, client.get_type("TargetSpend")
+        )
     c.network_settings.target_google_search = True
     c.network_settings.target_search_network = False
     c.network_settings.target_content_network = False
@@ -623,7 +629,8 @@ def update_entity_status(
     )
     entity.status = getattr(getattr(client.enums, enum_name), status)
     client.copy_from(
-        op.update_mask, client.get_type("FieldMask")(paths=["status"])
+        op.update_mask,
+        protobuf_helpers.field_mask(None, entity._pb),
     )
     try:
         resp = getattr(svc, mutate_fn)(
