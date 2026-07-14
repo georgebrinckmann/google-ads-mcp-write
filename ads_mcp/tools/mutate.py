@@ -450,7 +450,24 @@ def create_responsive_search_ad(
         )
     except GoogleAdsException as ex:
         raise _handle(ex)
-    return {"ad_resource_name": resp.results[0].resource_name}
+    result: Dict[str, Any] = {
+        "ad_resource_name": resp.results[0].resource_name,
+        "headlines": len(headlines),
+        "descriptions": len(descriptions),
+    }
+    warns = []
+    if len(headlines) < 15:
+        warns.append(
+            f"Apenas {len(headlines)}/15 headlines — Ad Strength dificilmente "
+            "chega a Excelente. Complete os 15 antes de encerrar."
+        )
+    if len(descriptions) < 4:
+        warns.append(
+            f"Apenas {len(descriptions)}/4 descriptions — complete as 4."
+        )
+    if warns:
+        result["warning"] = " ".join(warns)
+    return result
 
 
 # ------------------------------------------------------------------- assets
@@ -463,6 +480,13 @@ def create_sitelinks(
     sitelinks: List[Dict[str, str]],
 ) -> Dict[str, Any]:
     """Creates sitelink assets and links them to a campaign.
+
+    RULE: every sitelink must be about the SAME service this campaign
+    advertises (pricing, portfolio, process, quote, testimonials, FAQ of
+    THAT service). NEVER link to a different service of the business —
+    e.g. a "Google Ads Management" sitelink on a "Website Creation"
+    campaign is forbidden. Do not reuse existing assets from other
+    services. Provide exactly 6 sitelinks with both description lines.
 
     Args:
         customer_id: The customer account id.
@@ -517,7 +541,15 @@ def create_sitelinks(
         )
     except GoogleAdsException as ex:
         raise _handle(ex)
-    return {"sitelinks_created": len(asset_resp.results)}
+    result: Dict[str, Any] = {
+        "sitelinks_created": len(asset_resp.results)
+    }
+    if len(sitelinks) != 6:
+        result["warning"] = (
+            f"{len(sitelinks)} sitelinks — o padrão da conta é 6, todos do "
+            "mesmo serviço da campanha."
+        )
+    return result
 
 
 @mutate_mcp.tool
