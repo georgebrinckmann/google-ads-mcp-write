@@ -569,6 +569,254 @@ def create_callouts(
     return {"callouts_created": len(asset_resp.results)}
 
 
+
+
+@mutate_mcp.tool
+def set_campaign_geo(
+    customer_id: str,
+    campaign_id: str,
+    geo_ids: List[int],
+) -> Dict[str, Any]:
+    """Replaces the geo targeting of an EXISTING campaign.
+
+    Removes all current location criteria and adds the given geo target
+    constants. Find geo ids with a GAQL search on geo_target_constant
+    (e.g. name LIKE '%Sao Paulo%'). Common: 2076=Brazil, 1001773=Sao Paulo state.
+
+    Args:
+        customer_id: The customer account id.
+        campaign_id: Numeric id of the campaign.
+        geo_ids: New geo target constant ids (replaces ALL current locations).
+    """
+    _guard_writes()
+    if not geo_ids:
+        raise ToolError("Informe ao menos um geo_id.")
+    customer_id = _cid(customer_id)
+    client = utils.get_googleads_client()
+
+    # 1) find existing location criteria
+    ga = utils.get_googleads_service("GoogleAdsService")
+    query = (
+        "SELECT campaign_criterion.resource_name "
+        "FROM campaign_criterion "
+        f"WHERE campaign.id = {int(campaign_id)} "
+        "AND campaign_criterion.type = 'LOCATION'"
+    )
+    try:
+        rows = ga.search(customer_id=customer_id, query=query)
+        existing = [r.campaign_criterion.resource_name for r in rows]
+    except GoogleAdsException as ex:
+        raise _handle(ex)
+
+    # 2) remove old + add new in one mutate
+    svc = utils.get_googleads_service("CampaignCriterionService")
+    ops = []
+    for rn in existing:
+        o = client.get_type("CampaignCriterionOperation")
+        o.remove = rn
+        ops.append(o)
+    for gid in geo_ids:
+        o = client.get_type("CampaignCriterionOperation")
+        o.create.campaign = (
+            f"customers/{customer_id}/campaigns/{campaign_id}"
+        )
+        o.create.location.geo_target_constant = (
+            f"geoTargetConstants/{gid}"
+        )
+        ops.append(o)
+    try:
+        resp = svc.mutate_campaign_criteria(
+            customer_id=customer_id, operations=ops
+        )
+    except GoogleAdsException as ex:
+        raise _handle(ex)
+    return {
+        "removed_locations": len(existing),
+        "added_locations": len(geo_ids),
+        "results": len(resp.results),
+    }
+
+
+
+
+@mutate_mcp.tool
+def create_structured_snippets(
+    customer_id: str,
+    campaign_id: str,
+    header: str,
+    values: List[str],
+) -> Dict[str, Any]:
+    """Creates a structured snippet asset and links it to a campaign.
+
+    Args:
+        customer_id: The customer account id.
+        campaign_id: Numeric id of the campaign.
+        header: One of Google's predefined headers, localized. In pt-BR
+            accounts use e.g. "Servi\u00e7os", "Tipos", "Marcas", "Modelos",
+            "Destinos", "Cursos". Must match Google's list exactly.
+        values: 3 to 10 values, each <= 25 chars, all belonging to the header.
+    """
+    _guard_writes()
+    if not 3 <= len(values) <= 10:
+        raise ToolError("Snippet exige de 3 a 10 valores para veicular.")
+    _guard_chars(values, _CALLOUT, "Snippet value")
+
+    customer_id = _cid(customer_id)
+    client = utils.get_googleads_client()
+    asset_svc = utils.get_googleads_service("AssetService")
+
+    o = client.get_type("AssetOperation")
+    o.create.structured_snippet_asset.header = header
+    for v in values:
+        o.create.structured_snippet_asset.values.append(v)
+    try:
+        resp = asset_svc.mutate_assets(
+            customer_id=customer_id, operations=[o]
+        )
+    except GoogleAdsException as ex:
+        raise _handle(ex)
+
+    ca_svc = utils.get_googleads_service("CampaignAssetService")
+    link = client.get_type("CampaignAssetOperation")
+    link.create.campaign = (
+        f"customers/{customer_id}/campaigns/{campaign_id}"
+    )
+    link.create.asset = resp.results[0].resource_name
+    link.create.field_type = (
+        client.enums.AssetFieldTypeEnum.STRUCTURED_SNIPPET
+    )
+    try:
+        ca_svc.mutate_campaign_assets(
+            customer_id=customer_id, operations=[link]
+        )
+    except GoogleAdsException as ex:
+        raise _handle(ex)
+    return {"snippet_header": header, "values": len(values)}
+
+
+@mutate_mcp.tool
+def set_business_name(
+    customer_id: str, campaign_id: str, business_name: str
+) -> Dict[str, Any]:
+    """Creates a Business Name asset (<= 25 chars) and links it to a campaign.
+
+    IMPORTANT: Google only serves the business name if it matches the
+    verified advertiser identity of the account. If it doesn't serve,
+    the account owner must complete advertiser verification in the UI.
+
+    Args:
+        customer_id: The customer account id.
+        campaign_id: Numeric id of the campaign.
+        business_name: The business name, max 25 characters.
+    """
+    _guard_writes()
+    _guard_chars([business_name], 25, "Business name")
+
+    customer_id = _cid(customer_id)
+    client = utils.get_googleads_client()
+    asset_svc = utils.get_googleads_service("AssetService")
+
+    o = client.get_type("AssetOperation")
+    o.create.text_asset.text = business_name
+    try:
+        resp = asset_svc.mutate_assets(
+            customer_id=customer_id, operations=[o]
+        )
+    except GoogleAdsException as ex:
+        raise _handle(ex)
+
+    ca_svc = utils.get_googleads_service("CampaignAssetService")
+    link = client.get_type("CampaignAssetOperation")
+    link.create.campaign = (
+        f"customers/{customer_id}/campaigns/{campaign_id}"
+    )
+    link.create.asset = resp.results[0].resource_name
+    link.create.field_type = (
+        client.enums.AssetFieldTypeEnum.BUSINESS_NAME
+    )
+    try:
+        ca_svc.mutate_campaign_assets(
+            customer_id=customer_id, operations=[link]
+        )
+    except GoogleAdsException as ex:
+        raise _handle(ex)
+    return {"business_name": business_name, "linked": True}
+
+
+@mutate_mcp.tool
+def upload_image_from_url(
+    customer_id: str,
+    campaign_id: str,
+    image_url: str,
+    asset_name: str,
+    square: bool = False,
+) -> Dict[str, Any]:
+    """Downloads an image from a URL, uploads it as an ImageAsset and links
+    it to a campaign as an image extension.
+
+    Requirements enforced by Google (errors bubble up if not met):
+    - Landscape (square=False): ratio 1.91:1, min 600x314
+    - Square (square=True): ratio 1:1, min 300x300
+    - JPG/PNG, < 5MB, no logo/text overlay, not blurry
+
+    Args:
+        customer_id: The customer account id.
+        campaign_id: Numeric id of the campaign.
+        image_url: Public URL of the image (e.g. from the client's site).
+        asset_name: A unique name for the asset in the account.
+        square: True for 1:1 square marketing image, False for landscape.
+    """
+    _guard_writes()
+    import requests as _rq
+
+    try:
+        r = _rq.get(image_url, timeout=30)
+        r.raise_for_status()
+        data = r.content
+    except Exception as ex:
+        raise ToolError(f"Falha ao baixar a imagem: {ex}")
+    if len(data) > 5 * 1024 * 1024:
+        raise ToolError("Imagem maior que 5MB — otimize antes de subir.")
+
+    customer_id = _cid(customer_id)
+    client = utils.get_googleads_client()
+    asset_svc = utils.get_googleads_service("AssetService")
+
+    o = client.get_type("AssetOperation")
+    o.create.name = asset_name
+    o.create.type_ = client.enums.AssetTypeEnum.IMAGE
+    o.create.image_asset.data = data
+    try:
+        resp = asset_svc.mutate_assets(
+            customer_id=customer_id, operations=[o]
+        )
+    except GoogleAdsException as ex:
+        raise _handle(ex)
+
+    ca_svc = utils.get_googleads_service("CampaignAssetService")
+    link = client.get_type("CampaignAssetOperation")
+    link.create.campaign = (
+        f"customers/{customer_id}/campaigns/{campaign_id}"
+    )
+    link.create.asset = resp.results[0].resource_name
+    link.create.field_type = (
+        client.enums.AssetFieldTypeEnum.SQUARE_MARKETING_IMAGE
+        if square
+        else client.enums.AssetFieldTypeEnum.MARKETING_IMAGE
+    )
+    try:
+        ca_svc.mutate_campaign_assets(
+            customer_id=customer_id, operations=[link]
+        )
+    except GoogleAdsException as ex:
+        raise _handle(ex)
+    return {
+        "asset": resp.results[0].resource_name,
+        "bytes": len(data),
+        "field": "SQUARE_MARKETING_IMAGE" if square else "MARKETING_IMAGE",
+    }
+
+
 # ------------------------------------------------------- status & removal
 
 _ENTITY_SERVICES = {
