@@ -849,6 +849,138 @@ def upload_image_from_url(
     }
 
 
+
+
+@mutate_mcp.tool
+def update_responsive_search_ad(
+    customer_id: str,
+    ad_id: str,
+    headlines: List[str],
+    descriptions: List[str],
+    final_url: str,
+    path1: str = "",
+    path2: str = "",
+    pin_first_headline: bool = True,
+) -> Dict[str, Any]:
+    """EDITS an existing Responsive Search Ad in place (same ad id).
+
+    Replaces the FULL set of headlines and descriptions — pass all 15/4,
+    not only the new ones (partial lists REMOVE the missing assets).
+    Editing resets part of the ad's combination learning; prefer this over
+    creating a duplicate ad when the goal is completing/improving assets.
+
+    Args:
+        customer_id: The customer account id.
+        ad_id: Numeric id of the AD (not the ad_group_ad). From GAQL:
+            SELECT ad_group_ad.ad.id FROM ad_group_ad ...
+        headlines: FULL list, 3-15 items, <=30 chars each.
+        descriptions: FULL list, 2-4 items, <=90 chars each.
+        final_url: Landing page URL.
+        path1: Display path 1 (max 15 chars).
+        path2: Display path 2 (max 15 chars).
+        pin_first_headline: Pin headlines[0] to position 1.
+    """
+    _guard_writes()
+    if not 3 <= len(headlines) <= 15:
+        raise ToolError("RSA exige de 3 a 15 headlines (lista COMPLETA).")
+    if not 2 <= len(descriptions) <= 4:
+        raise ToolError("RSA exige de 2 a 4 descriptions (lista COMPLETA).")
+    _guard_chars(headlines, _H_LIMIT, "Headline")
+    _guard_chars(descriptions, _D_LIMIT, "Description")
+    if path1:
+        _guard_chars([path1], 15, "Path 1")
+    if path2:
+        _guard_chars([path2], 15, "Path 2")
+
+    customer_id = _cid(customer_id)
+    client = utils.get_googleads_client()
+    svc = utils.get_googleads_service("AdService")
+
+    op = client.get_type("AdOperation")
+    ad = op.update
+    ad.resource_name = f"customers/{customer_id}/ads/{ad_id}"
+    ad.final_urls.append(final_url)
+    rsa = ad.responsive_search_ad
+    for i, h in enumerate(headlines):
+        asset = client.get_type("AdTextAsset")
+        asset.text = h
+        if i == 0 and pin_first_headline:
+            asset.pinned_field = (
+                client.enums.ServedAssetFieldTypeEnum.HEADLINE_1
+            )
+        rsa.headlines.append(asset)
+    for d in descriptions:
+        asset = client.get_type("AdTextAsset")
+        asset.text = d
+        rsa.descriptions.append(asset)
+    if path1:
+        rsa.path1 = path1
+    if path2:
+        rsa.path2 = path2
+    client.copy_from(
+        op.update_mask,
+        protobuf_helpers.field_mask(None, ad._pb),
+    )
+    try:
+        resp = svc.mutate_ads(customer_id=customer_id, operations=[op])
+    except GoogleAdsException as ex:
+        raise _handle(ex)
+    result: Dict[str, Any] = {
+        "updated_ad": resp.results[0].resource_name,
+        "headlines": len(headlines),
+        "descriptions": len(descriptions),
+    }
+    if len(headlines) < 15:
+        result["warning"] = (
+            f"Apenas {len(headlines)}/15 headlines — complete os 15."
+        )
+    return result
+
+
+@mutate_mcp.tool
+def remove_campaign_asset(
+    customer_id: str,
+    campaign_asset_resource_name: str,
+    confirm: bool = False,
+) -> Dict[str, Any]:
+    """UNLINKS an asset (sitelink, callout, snippet, image...) from a campaign.
+
+    Use to remove a wrong sitelink (e.g. one about a different service).
+    The asset itself survives in the account; only the campaign link and its
+    performance history on this campaign are removed. Requires confirm=True.
+
+    Find the resource name first via GAQL:
+        SELECT campaign_asset.resource_name, asset.sitelink_asset.link_text,
+               campaign_asset.field_type
+        FROM campaign_asset WHERE campaign.id = X
+
+    Args:
+        customer_id: The customer account id.
+        campaign_asset_resource_name: Full resource name
+            (customers/X/campaignAssets/Y~Z~FIELD).
+        confirm: Must be True. Removal of the link is permanent.
+    """
+    _guard_writes()
+    if not confirm:
+        raise ToolError(
+            "Remover o vínculo apaga o histórico do asset nesta campanha. "
+            "Confirme com o usuário e chame novamente com confirm=True."
+        )
+    customer_id = _cid(customer_id)
+    client = utils.get_googleads_client()
+    svc = utils.get_googleads_service("CampaignAssetService")
+
+    op = client.get_type("CampaignAssetOperation")
+    op.remove = campaign_asset_resource_name
+    try:
+        resp = svc.mutate_campaign_assets(
+            customer_id=customer_id, operations=[op]
+        )
+    except GoogleAdsException as ex:
+        raise _handle(ex)
+    return {"removed_link": resp.results[0].resource_name}
+
+
 # ------------------------------------------------------- status & removal
 
 _ENTITY_SERVICES = {
