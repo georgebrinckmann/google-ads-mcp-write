@@ -100,9 +100,7 @@ def create_campaign_budget(
     budget = op.create
     budget.name = name
     budget.amount_micros = _micros(daily_amount)
-    budget.delivery_method = (
-        client.enums.BudgetDeliveryMethodEnum.STANDARD
-    )
+    budget.delivery_method = client.enums.BudgetDeliveryMethodEnum.STANDARD
     budget.explicitly_shared = False
     try:
         resp = svc.mutate_campaign_budgets(
@@ -184,18 +182,14 @@ def create_search_campaign(
     c = op.create
     c.name = name
     c.status = client.enums.CampaignStatusEnum.PAUSED
-    c.advertising_channel_type = (
-        client.enums.AdvertisingChannelTypeEnum.SEARCH
-    )
+    c.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
     c.campaign_budget = budget_resource_name
     # Activate TARGET_SPEND (Maximize Clicks). Only set a bid ceiling when
     # provided — a ceiling of 0 is rejected by the API ("Too low").
     if max_cpc:
         c.target_spend.cpc_bid_ceiling_micros = _micros(max_cpc)
     else:
-        client.copy_from(
-            c.target_spend, client.get_type("TargetSpend")
-        )
+        client.copy_from(c.target_spend, client.get_type("TargetSpend"))
     c.network_settings.target_google_search = True
     c.network_settings.target_search_network = False
     c.network_settings.target_content_network = False
@@ -203,9 +197,7 @@ def create_search_campaign(
         client.enums.EuPoliticalAdvertisingStatusEnum.DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING
     )
     try:
-        resp = svc.mutate_campaigns(
-            customer_id=customer_id, operations=[op]
-        )
+        resp = svc.mutate_campaigns(customer_id=customer_id, operations=[op])
         campaign_rn = resp.results[0].resource_name
     except GoogleAdsException as ex:
         raise _handle(ex)
@@ -216,9 +208,7 @@ def create_search_campaign(
     for gid in geo_ids:
         o = client.get_type("CampaignCriterionOperation")
         o.create.campaign = campaign_rn
-        o.create.location.geo_target_constant = (
-            f"geoTargetConstants/{gid}"
-        )
+        o.create.location.geo_target_constant = f"geoTargetConstants/{gid}"
         ops.append(o)
     for lid in language_ids:
         o = client.get_type("CampaignCriterionOperation")
@@ -274,9 +264,7 @@ def create_ad_group(
     if max_cpc:
         ag.cpc_bid_micros = _micros(max_cpc)
     try:
-        resp = svc.mutate_ad_groups(
-            customer_id=customer_id, operations=[op]
-        )
+        resp = svc.mutate_ad_groups(customer_id=customer_id, operations=[op])
     except GoogleAdsException as ex:
         raise _handle(ex)
     return {"ad_group_resource_name": resp.results[0].resource_name}
@@ -312,14 +300,10 @@ def add_keywords(
             raise ToolError(f"match_type inválido: {mt}")
         o = client.get_type("AdGroupCriterionOperation")
         crit = o.create
-        crit.ad_group = (
-            f"customers/{customer_id}/adGroups/{ad_group_id}"
-        )
+        crit.ad_group = f"customers/{customer_id}/adGroups/{ad_group_id}"
         crit.status = client.enums.AdGroupCriterionStatusEnum.ENABLED
         crit.keyword.text = kw["text"]
-        crit.keyword.match_type = getattr(
-            client.enums.KeywordMatchTypeEnum, mt
-        )
+        crit.keyword.match_type = getattr(client.enums.KeywordMatchTypeEnum, mt)
         ops.append(o)
     try:
         resp = svc.mutate_ad_group_criteria(
@@ -358,14 +342,10 @@ def add_negative_keywords(
     for text in keywords:
         o = client.get_type("CampaignCriterionOperation")
         crit = o.create
-        crit.campaign = (
-            f"customers/{customer_id}/campaigns/{campaign_id}"
-        )
+        crit.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
         crit.negative = True
         crit.keyword.text = text
-        crit.keyword.match_type = getattr(
-            client.enums.KeywordMatchTypeEnum, mt
-        )
+        crit.keyword.match_type = getattr(client.enums.KeywordMatchTypeEnum, mt)
         ops.append(o)
     try:
         resp = svc.mutate_campaign_criteria(
@@ -445,9 +425,7 @@ def create_responsive_search_ad(
     if path2:
         rsa.path2 = path2
     try:
-        resp = svc.mutate_ad_group_ads(
-            customer_id=customer_id, operations=[op]
-        )
+        resp = svc.mutate_ad_group_ads(customer_id=customer_id, operations=[op])
     except GoogleAdsException as ex:
         raise _handle(ex)
     result: Dict[str, Any] = {
@@ -529,9 +507,7 @@ def create_sitelinks(
     link_ops = []
     for result in asset_resp.results:
         o = client.get_type("CampaignAssetOperation")
-        o.create.campaign = (
-            f"customers/{customer_id}/campaigns/{campaign_id}"
-        )
+        o.create.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
         o.create.asset = result.resource_name
         o.create.field_type = client.enums.AssetFieldTypeEnum.SITELINK
         link_ops.append(o)
@@ -541,9 +517,7 @@ def create_sitelinks(
         )
     except GoogleAdsException as ex:
         raise _handle(ex)
-    result: Dict[str, Any] = {
-        "sitelinks_created": len(asset_resp.results)
-    }
+    result: Dict[str, Any] = {"sitelinks_created": len(asset_resp.results)}
     if len(sitelinks) != 6:
         result["warning"] = (
             f"{len(sitelinks)} sitelinks — o padrão da conta é 6, todos do "
@@ -586,9 +560,7 @@ def create_callouts(
     link_ops = []
     for result in asset_resp.results:
         o = client.get_type("CampaignAssetOperation")
-        o.create.campaign = (
-            f"customers/{customer_id}/campaigns/{campaign_id}"
-        )
+        o.create.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
         o.create.asset = result.resource_name
         o.create.field_type = client.enums.AssetFieldTypeEnum.CALLOUT
         link_ops.append(o)
@@ -599,8 +571,6 @@ def create_callouts(
     except GoogleAdsException as ex:
         raise _handle(ex)
     return {"callouts_created": len(asset_resp.results)}
-
-
 
 
 @mutate_mcp.tool
@@ -649,12 +619,8 @@ def set_campaign_geo(
         ops.append(o)
     for gid in geo_ids:
         o = client.get_type("CampaignCriterionOperation")
-        o.create.campaign = (
-            f"customers/{customer_id}/campaigns/{campaign_id}"
-        )
-        o.create.location.geo_target_constant = (
-            f"geoTargetConstants/{gid}"
-        )
+        o.create.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
+        o.create.location.geo_target_constant = f"geoTargetConstants/{gid}"
         ops.append(o)
     try:
         resp = svc.mutate_campaign_criteria(
@@ -667,8 +633,6 @@ def set_campaign_geo(
         "added_locations": len(geo_ids),
         "results": len(resp.results),
     }
-
-
 
 
 @mutate_mcp.tool
@@ -702,21 +666,15 @@ def create_structured_snippets(
     for v in values:
         o.create.structured_snippet_asset.values.append(v)
     try:
-        resp = asset_svc.mutate_assets(
-            customer_id=customer_id, operations=[o]
-        )
+        resp = asset_svc.mutate_assets(customer_id=customer_id, operations=[o])
     except GoogleAdsException as ex:
         raise _handle(ex)
 
     ca_svc = utils.get_googleads_service("CampaignAssetService")
     link = client.get_type("CampaignAssetOperation")
-    link.create.campaign = (
-        f"customers/{customer_id}/campaigns/{campaign_id}"
-    )
+    link.create.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
     link.create.asset = resp.results[0].resource_name
-    link.create.field_type = (
-        client.enums.AssetFieldTypeEnum.STRUCTURED_SNIPPET
-    )
+    link.create.field_type = client.enums.AssetFieldTypeEnum.STRUCTURED_SNIPPET
     try:
         ca_svc.mutate_campaign_assets(
             customer_id=customer_id, operations=[link]
@@ -751,21 +709,15 @@ def set_business_name(
     o = client.get_type("AssetOperation")
     o.create.text_asset.text = business_name
     try:
-        resp = asset_svc.mutate_assets(
-            customer_id=customer_id, operations=[o]
-        )
+        resp = asset_svc.mutate_assets(customer_id=customer_id, operations=[o])
     except GoogleAdsException as ex:
         raise _handle(ex)
 
     ca_svc = utils.get_googleads_service("CampaignAssetService")
     link = client.get_type("CampaignAssetOperation")
-    link.create.campaign = (
-        f"customers/{customer_id}/campaigns/{campaign_id}"
-    )
+    link.create.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
     link.create.asset = resp.results[0].resource_name
-    link.create.field_type = (
-        client.enums.AssetFieldTypeEnum.BUSINESS_NAME
-    )
+    link.create.field_type = client.enums.AssetFieldTypeEnum.BUSINESS_NAME
     try:
         ca_svc.mutate_campaign_assets(
             customer_id=customer_id, operations=[link]
@@ -819,17 +771,13 @@ def upload_image_from_url(
     o.create.type_ = client.enums.AssetTypeEnum.IMAGE
     o.create.image_asset.data = data
     try:
-        resp = asset_svc.mutate_assets(
-            customer_id=customer_id, operations=[o]
-        )
+        resp = asset_svc.mutate_assets(customer_id=customer_id, operations=[o])
     except GoogleAdsException as ex:
         raise _handle(ex)
 
     ca_svc = utils.get_googleads_service("CampaignAssetService")
     link = client.get_type("CampaignAssetOperation")
-    link.create.campaign = (
-        f"customers/{customer_id}/campaigns/{campaign_id}"
-    )
+    link.create.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
     link.create.asset = resp.results[0].resource_name
     link.create.field_type = (
         client.enums.AssetFieldTypeEnum.SQUARE_MARKETING_IMAGE
@@ -847,8 +795,6 @@ def upload_image_from_url(
         "bytes": len(data),
         "field": "SQUARE_MARKETING_IMAGE" if square else "MARKETING_IMAGE",
     }
-
-
 
 
 @mutate_mcp.tool
@@ -984,12 +930,27 @@ def remove_campaign_asset(
 # ------------------------------------------------------- status & removal
 
 _ENTITY_SERVICES = {
-    "campaign": ("CampaignService", "CampaignOperation", "campaigns",
-                 "mutate_campaigns", "CampaignStatusEnum"),
-    "ad_group": ("AdGroupService", "AdGroupOperation", "adGroups",
-                 "mutate_ad_groups", "AdGroupStatusEnum"),
-    "ad": ("AdGroupAdService", "AdGroupAdOperation", "adGroupAds",
-           "mutate_ad_group_ads", "AdGroupAdStatusEnum"),
+    "campaign": (
+        "CampaignService",
+        "CampaignOperation",
+        "campaigns",
+        "mutate_campaigns",
+        "CampaignStatusEnum",
+    ),
+    "ad_group": (
+        "AdGroupService",
+        "AdGroupOperation",
+        "adGroups",
+        "mutate_ad_groups",
+        "AdGroupStatusEnum",
+    ),
+    "ad": (
+        "AdGroupAdService",
+        "AdGroupAdOperation",
+        "adGroupAds",
+        "mutate_ad_group_ads",
+        "AdGroupAdStatusEnum",
+    ),
 }
 
 
@@ -1023,9 +984,7 @@ def update_entity_status(
             "Confirme com o usuário e chame novamente com confirm=True."
         )
     if entity_type not in _ENTITY_SERVICES:
-        raise ToolError(
-            f"entity_type deve ser um de: {list(_ENTITY_SERVICES)}"
-        )
+        raise ToolError(f"entity_type deve ser um de: {list(_ENTITY_SERVICES)}")
 
     customer_id = _cid(customer_id)
     client = utils.get_googleads_client()
@@ -1036,18 +995,14 @@ def update_entity_status(
 
     op = client.get_type(op_name)
     entity = op.update
-    entity.resource_name = (
-        f"customers/{customer_id}/{path}/{entity_id}"
-    )
+    entity.resource_name = f"customers/{customer_id}/{path}/{entity_id}"
     entity.status = getattr(getattr(client.enums, enum_name), status)
     client.copy_from(
         op.update_mask,
         protobuf_helpers.field_mask(None, entity._pb),
     )
     try:
-        resp = getattr(svc, mutate_fn)(
-            customer_id=customer_id, operations=[op]
-        )
+        resp = getattr(svc, mutate_fn)(customer_id=customer_id, operations=[op])
     except GoogleAdsException as ex:
         raise _handle(ex)
     return {
@@ -1082,9 +1037,7 @@ def remove_entity(
             "Considere pausar em vez de excluir."
         )
     if entity_type not in _ENTITY_SERVICES:
-        raise ToolError(
-            f"entity_type deve ser um de: {list(_ENTITY_SERVICES)}"
-        )
+        raise ToolError(f"entity_type deve ser um de: {list(_ENTITY_SERVICES)}")
 
     customer_id = _cid(customer_id)
     client = utils.get_googleads_client()
@@ -1094,9 +1047,7 @@ def remove_entity(
     op = client.get_type(op_name)
     op.remove = f"customers/{customer_id}/{path}/{entity_id}"
     try:
-        resp = getattr(svc, mutate_fn)(
-            customer_id=customer_id, operations=[op]
-        )
+        resp = getattr(svc, mutate_fn)(customer_id=customer_id, operations=[op])
     except GoogleAdsException as ex:
         raise _handle(ex)
     return {"removed": resp.results[0].resource_name}

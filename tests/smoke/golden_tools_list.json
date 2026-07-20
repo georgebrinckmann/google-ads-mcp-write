@@ -67,6 +67,783 @@
           "tags": []
         }
       },
+      "description": "Adds keywords to an ad group.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "ad_group_id": {
+            "description": "Numeric id of the ad group.",
+            "type": "string"
+          },
+          "customer_id": {
+            "description": "The customer account id.",
+            "type": "string"
+          },
+          "keywords": {
+            "description": "List of {\"text\": \"...\", \"match_type\": \"EXACT|PHRASE|BROAD\"}.",
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "customer_id",
+          "ad_group_id",
+          "keywords"
+        ],
+        "type": "object"
+      },
+      "name": "mutate_add_keywords",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "description": "Adds negative keywords at the CAMPAIGN level.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaign_id": {
+            "description": "Numeric id of the campaign.",
+            "type": "string"
+          },
+          "customer_id": {
+            "description": "The customer account id.",
+            "type": "string"
+          },
+          "keywords": {
+            "description": "List of keyword texts to block.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "match_type": {
+            "default": "BROAD",
+            "description": "EXACT, PHRASE or BROAD (default BROAD).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "customer_id",
+          "campaign_id",
+          "keywords"
+        ],
+        "type": "object"
+      },
+      "name": "mutate_add_negative_keywords",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "description": "Creates an ad group (ENABLED) inside a campaign.\n\nThe paused campaign is the single safety gate \u2014 the ad group itself is\nenabled so activating the campaign later requires one call, not many.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaign_id": {
+            "description": "Numeric id of the parent campaign.",
+            "type": "string"
+          },
+          "customer_id": {
+            "description": "The customer account id.",
+            "type": "string"
+          },
+          "max_cpc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional default CPC bid in account currency."
+          },
+          "name": {
+            "description": "Ad group name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "customer_id",
+          "campaign_id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "name": "mutate_create_ad_group",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "description": "Creates callout assets (<= 25 chars each) and links them to a campaign.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaign_id": {
+            "description": "Numeric id of the campaign.",
+            "type": "string"
+          },
+          "customer_id": {
+            "description": "The customer account id.",
+            "type": "string"
+          },
+          "texts": {
+            "description": "Callout texts, max 25 chars each. Recommended 6+.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "customer_id",
+          "campaign_id",
+          "texts"
+        ],
+        "type": "object"
+      },
+      "name": "mutate_create_callouts",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "description": "Creates a daily campaign budget (not shared).",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "customer_id": {
+            "description": "The customer account id.",
+            "type": "string"
+          },
+          "daily_amount": {
+            "description": "Daily amount in the ACCOUNT CURRENCY (e.g. 40.0 = R$40/day).",
+            "type": "number"
+          },
+          "name": {
+            "description": "Budget name (must be unique in the account).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "customer_id",
+          "name",
+          "daily_amount"
+        ],
+        "type": "object"
+      },
+      "name": "mutate_create_campaign_budget",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "description": "Creates a Responsive Search Ad in an ad group.\n\nValidates character limits BEFORE calling the API:\nheadlines <= 30 chars (3-15 items), descriptions <= 90 chars (2-4 items).",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "ad_group_id": {
+            "description": "Numeric id of the ad group.",
+            "type": "string"
+          },
+          "customer_id": {
+            "description": "The customer account id.",
+            "type": "string"
+          },
+          "descriptions": {
+            "description": "2 to 4 descriptions, max 90 chars each.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "final_url": {
+            "description": "Landing page URL.",
+            "type": "string"
+          },
+          "headlines": {
+            "description": "3 to 15 headlines, max 30 chars each.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "path1": {
+            "default": "",
+            "description": "Optional display path 1 (max 15 chars).",
+            "type": "string"
+          },
+          "path2": {
+            "default": "",
+            "description": "Optional display path 2 (max 15 chars).",
+            "type": "string"
+          },
+          "pin_first_headline": {
+            "default": true,
+            "description": "Pin headlines[0] to position 1 (keyword-match).",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "customer_id",
+          "ad_group_id",
+          "headlines",
+          "descriptions",
+          "final_url"
+        ],
+        "type": "object"
+      },
+      "name": "mutate_create_responsive_search_ad",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "description": "Creates a Search campaign. ALWAYS created PAUSED (safety guardrail).\n\nUses Maximize Clicks (TARGET_SPEND) bidding, optionally with a max CPC\nceiling \u2014 the right strategy for accounts without conversion history.\nSearch partners and Display network are disabled by default.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "budget_resource_name": {
+            "description": "Resource name returned by create_campaign_budget.",
+            "type": "string"
+          },
+          "customer_id": {
+            "description": "The customer account id.",
+            "type": "string"
+          },
+          "geo_ids": {
+            "default": [
+              2076
+            ],
+            "description": "Geo target constant ids. Default [2076] = Brazil.",
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "language_ids": {
+            "default": [
+              1014
+            ],
+            "description": "Language constant ids. Default [1014] = Portuguese.",
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "max_cpc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional CPC bid ceiling in account currency."
+          },
+          "name": {
+            "description": "Campaign name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "customer_id",
+          "name",
+          "budget_resource_name"
+        ],
+        "type": "object"
+      },
+      "name": "mutate_create_search_campaign",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "description": "Creates sitelink assets and links them to a campaign.\n\nRULE: every sitelink must be about the SAME service this campaign\nadvertises (pricing, portfolio, process, quote, testimonials, FAQ of\nTHAT service). NEVER link to a different service of the business \u2014\ne.g. a \"Google Ads Management\" sitelink on a \"Website Creation\"\ncampaign is forbidden. Do not reuse existing assets from other\nservices. Provide exactly 6 sitelinks with both description lines.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaign_id": {
+            "description": "Numeric id of the campaign.",
+            "type": "string"
+          },
+          "customer_id": {
+            "description": "The customer account id.",
+            "type": "string"
+          },
+          "sitelinks": {
+            "description": "List of {\"text\",\"description1\",\"description2\",\"url\"}.\ntext <= 25 chars, descriptions <= 35 chars each.",
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "customer_id",
+          "campaign_id",
+          "sitelinks"
+        ],
+        "type": "object"
+      },
+      "name": "mutate_create_sitelinks",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "description": "Creates a structured snippet asset and links it to a campaign.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaign_id": {
+            "description": "Numeric id of the campaign.",
+            "type": "string"
+          },
+          "customer_id": {
+            "description": "The customer account id.",
+            "type": "string"
+          },
+          "header": {
+            "description": "One of Google's predefined headers, localized. In pt-BR\naccounts use e.g. \"Servi\u00e7os\", \"Tipos\", \"Marcas\", \"Modelos\",\n\"Destinos\", \"Cursos\". Must match Google's list exactly.",
+            "type": "string"
+          },
+          "values": {
+            "description": "3 to 10 values, each <= 25 chars, all belonging to the header.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "customer_id",
+          "campaign_id",
+          "header",
+          "values"
+        ],
+        "type": "object"
+      },
+      "name": "mutate_create_structured_snippets",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "description": "UNLINKS an asset (sitelink, callout, snippet, image...) from a campaign.\n\nUse to remove a wrong sitelink (e.g. one about a different service).\nThe asset itself survives in the account; only the campaign link and its\nperformance history on this campaign are removed. Requires confirm=True.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaign_asset_resource_name": {
+            "description": "Full resource name\n(customers/X/campaignAssets/Y~Z~FIELD).",
+            "type": "string"
+          },
+          "confirm": {
+            "default": false,
+            "description": "Must be True. Removal of the link is permanent.",
+            "type": "boolean"
+          },
+          "customer_id": {
+            "description": "The customer account id.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "customer_id",
+          "campaign_asset_resource_name"
+        ],
+        "type": "object"
+      },
+      "name": "mutate_remove_campaign_asset",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "description": "PERMANENTLY removes a campaign, ad group, or ad. Irreversible.\n\nRequires confirm=\"EXCLUIR\" (literal). Prefer pausing over removing \u2014\nremoval destroys performance history.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm": {
+            "default": "",
+            "description": "Must be the literal string \"EXCLUIR\".",
+            "type": "string"
+          },
+          "customer_id": {
+            "description": "The customer account id.",
+            "type": "string"
+          },
+          "entity_id": {
+            "description": "Numeric id. For \"ad\" use the composite \"adGroupId~adId\".",
+            "type": "string"
+          },
+          "entity_type": {
+            "description": "\"campaign\", \"ad_group\" or \"ad\".",
+            "type": "string"
+          }
+        },
+        "required": [
+          "customer_id",
+          "entity_type",
+          "entity_id"
+        ],
+        "type": "object"
+      },
+      "name": "mutate_remove_entity",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "description": "Creates a Business Name asset (<= 25 chars) and links it to a campaign.\n\nIMPORTANT: Google only serves the business name if it matches the\nverified advertiser identity of the account. If it doesn't serve,\nthe account owner must complete advertiser verification in the UI.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "business_name": {
+            "description": "The business name, max 25 characters.",
+            "type": "string"
+          },
+          "campaign_id": {
+            "description": "Numeric id of the campaign.",
+            "type": "string"
+          },
+          "customer_id": {
+            "description": "The customer account id.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "customer_id",
+          "campaign_id",
+          "business_name"
+        ],
+        "type": "object"
+      },
+      "name": "mutate_set_business_name",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "description": "Replaces the geo targeting of an EXISTING campaign.\n\nRemoves all current location criteria and adds the given geo target\nconstants. Find geo ids with a GAQL search on geo_target_constant\n(e.g. name LIKE '%Sao Paulo%'). Common: 2076=Brazil, 1001773=Sao Paulo state.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaign_id": {
+            "description": "Numeric id of the campaign.",
+            "type": "string"
+          },
+          "customer_id": {
+            "description": "The customer account id.",
+            "type": "string"
+          },
+          "geo_ids": {
+            "description": "New geo target constant ids (replaces ALL current locations).",
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "customer_id",
+          "campaign_id",
+          "geo_ids"
+        ],
+        "type": "object"
+      },
+      "name": "mutate_set_campaign_geo",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "description": "Updates the daily amount of an existing campaign budget.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "budget_id": {
+            "description": "The numeric id of the campaign budget.",
+            "type": "string"
+          },
+          "customer_id": {
+            "description": "The customer account id.",
+            "type": "string"
+          },
+          "daily_amount": {
+            "description": "New daily amount in the account currency.",
+            "type": "number"
+          }
+        },
+        "required": [
+          "customer_id",
+          "budget_id",
+          "daily_amount"
+        ],
+        "type": "object"
+      },
+      "name": "mutate_update_campaign_budget",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "description": "Pauses or enables a campaign, ad group, or ad.\n\nENABLING requires confirm=True \u2014 enabling means real money starts\nbeing spent. Ask the user for explicit confirmation first.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm": {
+            "default": false,
+            "description": "Must be True when status is ENABLED.",
+            "type": "boolean"
+          },
+          "customer_id": {
+            "description": "The customer account id.",
+            "type": "string"
+          },
+          "entity_id": {
+            "description": "Numeric id. For \"ad\" use the composite \"adGroupId~adId\".",
+            "type": "string"
+          },
+          "entity_type": {
+            "description": "\"campaign\", \"ad_group\" or \"ad\".",
+            "type": "string"
+          },
+          "status": {
+            "description": "\"ENABLED\" or \"PAUSED\".",
+            "type": "string"
+          }
+        },
+        "required": [
+          "customer_id",
+          "entity_type",
+          "entity_id",
+          "status"
+        ],
+        "type": "object"
+      },
+      "name": "mutate_update_entity_status",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "description": "EDITS an existing Responsive Search Ad in place (same ad id).\n\nReplaces the FULL set of headlines and descriptions \u2014 pass all 15/4,\nnot only the new ones (partial lists REMOVE the missing assets).\nEditing resets part of the ad's combination learning; prefer this over\ncreating a duplicate ad when the goal is completing/improving assets.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "ad_id": {
+            "description": "Numeric id of the AD (not the ad_group_ad). From GAQL:\nSELECT ad_group_ad.ad.id FROM ad_group_ad ...",
+            "type": "string"
+          },
+          "customer_id": {
+            "description": "The customer account id.",
+            "type": "string"
+          },
+          "descriptions": {
+            "description": "FULL list, 2-4 items, <=90 chars each.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "final_url": {
+            "description": "Landing page URL.",
+            "type": "string"
+          },
+          "headlines": {
+            "description": "FULL list, 3-15 items, <=30 chars each.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "path1": {
+            "default": "",
+            "description": "Display path 1 (max 15 chars).",
+            "type": "string"
+          },
+          "path2": {
+            "default": "",
+            "description": "Display path 2 (max 15 chars).",
+            "type": "string"
+          },
+          "pin_first_headline": {
+            "default": true,
+            "description": "Pin headlines[0] to position 1.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "customer_id",
+          "ad_id",
+          "headlines",
+          "descriptions",
+          "final_url"
+        ],
+        "type": "object"
+      },
+      "name": "mutate_update_responsive_search_ad",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
+      "description": "Downloads an image from a URL, uploads it as an ImageAsset and links\nit to a campaign as an image extension.\n\nRequirements enforced by Google (errors bubble up if not met):\n- Landscape (square=False): ratio 1.91:1, min 600x314\n- Square (square=True): ratio 1:1, min 300x300\n- JPG/PNG, < 5MB, no logo/text overlay, not blurry",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "asset_name": {
+            "description": "A unique name for the asset in the account.",
+            "type": "string"
+          },
+          "campaign_id": {
+            "description": "Numeric id of the campaign.",
+            "type": "string"
+          },
+          "customer_id": {
+            "description": "The customer account id.",
+            "type": "string"
+          },
+          "image_url": {
+            "description": "Public URL of the image (e.g. from the client's site).",
+            "type": "string"
+          },
+          "square": {
+            "default": false,
+            "description": "True for 1:1 square marketing image, False for landscape.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "customer_id",
+          "campaign_id",
+          "image_url",
+          "asset_name"
+        ],
+        "type": "object"
+      },
+      "name": "mutate_upload_image_from_url",
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    {
+      "_meta": {
+        "fastmcp": {
+          "tags": []
+        }
+      },
       "annotations": {
         "readOnlyHint": true
       },
